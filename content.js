@@ -4,6 +4,45 @@ let currentLinkIndex = -1;
 let currentGroupIndex = 0;
 let linkGroups = [];
 let flatLinks = [];
+let helpMode = false;
+
+
+function toggleHelp() {
+    
+    const existing = document.getElementById("sidebar-nav-help");
+    if (existing) {
+        existing.remove();
+        helpMode = false;
+        console.log("[help] overlay removed");
+        return;
+    }
+    const overlay = document.createElement("div");
+    overlay.id = "sidebar-nav-help";
+    overlay.style.position = "fixed";
+    overlay.style.top = "40%";
+    overlay.style.border="2px solid white";
+    overlay.style.left = "50%";
+    overlay.style.transform = "translateX(-50%)";
+    overlay.style.backgroundColor = "rgba(0,0,0,0.85)";
+    overlay.style.color = "white";
+    overlay.style.padding = "1em";
+    overlay.style.zIndex = 10000;
+    overlay.style.borderRadius = "8px";
+    overlay.style.fontSize = "24px";
+    overlay.style.whiteSpace = "pre-line";
+    overlay.textContent = 
+        "n/p: 次の/前のリンク\n" +
+        "N/P: 次の/前のグループ\n" +
+        "e: モード終了\n" +
+        "Enter: 選択中のリンクを開く\n" +
+        "t: トップに戻る\n" +
+        "?: このヘルプの表示/非表示";
+    
+    document.body.appendChild(overlay);
+    helpMode = true;
+    console.log("[help] overlay shown");
+}
+
 // スタイル追加
 const style = document.createElement("style");
 style.textContent = `
@@ -150,7 +189,13 @@ function removeSessionStorage(){
 }
 
 function handleKeyNavigation(event) {
-    console.log(`handleKeyNavigation: key=${event.key} navigationMode=${navigationMode}`);
+    console.log(`handleKeyNavigation: key=${event.key} code=${event.code} shift=${event.shiftkey} navigationMode=${navigationMode}`);
+    if (event.code === "Slash"){
+        console.log("key === /");
+        toggleHelp();
+        return;        
+    }
+
     if (!navigationMode && ["n","p"].includes(event.key)) {
         console.log(`handleKeyNavigation: check key=${event.key} navigationMode=${navigationMode}`);        
         navigationMode = true;
@@ -158,7 +203,9 @@ function handleKeyNavigation(event) {
         initializeLinks();        
     }
 
+
     if (!navigationMode) return;
+    
     switch (event.key) {
     case "e":
         console.log("push e");
