@@ -1,0 +1,91 @@
+console.log("[content.js] loaded");
+let navigationMode = false;
+let currentLinkIndex = -1;
+let currentGroupIndex = 0;
+let linkGroups = [];
+let flatLinks = [];
+// スタイル追加
+const style = document.createElement("style");
+style.textContent = `
+.sidebar-nav-highlight {
+  background-color: white;  /* ハイライト背景色 */
+  color: black;             /* ハイライト文字色 */
+}
+`;
+document.head.appendChild(style);
+// 初期化
+function initializeLinks() {
+  try {
+    linkGroups = Array.from(document.querySelectorAll(
+      "#starlight__sidebar > div > sl-sidebar-state-persist > ul > li > details > ul"
+    )).map(ul => Array.from(ul.querySelectorAll("a")));
+    flatLinks = linkGroups.flat();
+    console.log(`[init] Found ${flatLinks.length} links in ${linkGroups.length} groups`);
+  } catch (e) {
+    console.error("[initializeLinks] failed:", e);
+  }
+}
+function highlightLink(link) {
+  flatLinks.forEach(l => l.classList.remove("sidebar-nav-highlight"));
+  if (link) {
+    link.classList.add("sidebar-nav-highlight");
+    link.scrollIntoView({ block: "center" });
+  }
+}
+function moveToLink(index) {
+  console.log(`[moveToLink] index=${index}`);
+  if (index < 0 || index >= flatLinks.length) {
+    console.warn("[moveToLink] index out of bounds");
+    return;
+  }
+  currentLinkIndex = index;
+  highlightLink(flatLinks[currentLinkIndex]);
+}
+function moveToGroup(delta) {
+  console.log(`[moveToGroup] delta=${delta}`);
+  const newGroupIndex = currentGroupIndex + delta;
+  if (newGroupIndex < 0 || newGroupIndex >= linkGroups.length) {
+    console.warn("[moveToGroup] group index out of bounds");
+    return;
+  }
+  currentGroupIndex = newGroupIndex;
+  const group = linkGroups[currentGroupIndex];
+  if (group.length > 0) {
+    const newLinkIndex = flatLinks.indexOf(group[0]);
+    if (newLinkIndex === -1) {
+      console.error("[moveToGroup] failed to find link in flatLinks");
+      return;
+    }
+    currentLinkIndex = newLinkIndex;
+    highlightLink(flatLinks[currentLinkIndex]);
+  } else {
+    console.warn("[moveToGroup] group is empty");
+  }
+}
+// キー操作
+window.addEventListener("keydown", (event) => {
+  console.log(`[keydown] key="${event.key}", shift=${event.shiftKey}`);
+  if (!navigationMode && event.key === "n" && !event.shiftKey) {
+    initializeLinks();
+    navigationMode = true;
+    moveToLink(0);
+    return;
+  }
+  if (!navigationMode) return;
+  if (event.key === "N") {
+    moveToGroup(1);
+  } else if (event.key === "P") {
+    moveToGroup(-1);
+  } else if (event.key === "n") {
+    moveToLink(currentLinkIndex + 1);
+  } else if (event.key === "p") {
+    moveToLink(currentLinkIndex - 1);
+  } else if (event.key === "Enter") {
+    console.log("[keydown] triggering click");
+    flatLinks[currentLinkIndex]?.click();
+  } else if (event.key === "e" || event.key === "Escape") {
+    console.log("[keydown] exiting navigation mode");
+    navigationMode = false;
+    flatLinks.forEach(l => l.classList.remove("sidebar-nav-highlight"));
+  }
+});

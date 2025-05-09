@@ -1,0 +1,5 @@
+/* style.css */
+.nav-highlight {
+  background-color: white; /* ハイライト背景色: 任意に変更可能 */
+  color: black !important; /* ハイライト文字色: 任意に変更可能 */
+}
