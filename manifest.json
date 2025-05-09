@@ -12,5 +12,17 @@
             "css": ["style.css"],
             "run_at": "document_idle"
         }
-    ]
+    ],
+
+    "action": {
+        "default_icon": {
+             "32": "icons/icon32.png",
+             "128": "icons/icon128.png"
+        },
+        "default_title": "Sidebar Navigator"
+    },
+    "icons": {
+         "32": "icons/icon32.png",
+         "128": "icons/icon128.png"
+    }
 }

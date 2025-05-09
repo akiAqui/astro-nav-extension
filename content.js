@@ -1,4 +1,4 @@
-console.log("[content.js/sidebar navigation] loaded");
+console.log("[content.js] loaded");
 let navigationMode = false;
 let currentLinkIndex = -1;
 let currentGroupIndex = 0;
@@ -24,23 +24,102 @@ function initializeLinks() {
     } catch (e) {
         console.error("[initializeLinks] failed:", e);
     }
+    restoreCurrentLink();    
+
 }
-function highlightLink(link) {
-    flatLinks.forEach(l => l.classList.remove("sidebar-nav-highlight"));
+function clearHighLightLink(){
+    flatLinks.forEach(l => l.classList.remove("sidebar-nav-highlight"));    
+}
+function highlightLink() {
+    console.log("highlightLink");
+    const link = flatLinks[currentLinkIndex];
+    clearHighLightLink();
     if (link) {
         link.classList.add("sidebar-nav-highlight");
         link.scrollIntoView({ block: "center" });
     }
 }
-function moveToLink(index) {
-    console.log(`[moveToLink] index=${index}`);
-    if (index < 0 || index >= flatLinks.length) {
-        console.warn("[moveToLink] index out of bounds");
-        return;
+
+function saveCurrentLink() {
+    console.log("saveCurrentLink");
+    try {
+        sessionStorage.setItem("sidebar-nav-index", currentLinkIndex);
+        sessionStorage.setItem("sidebar-group-index", currentGroupIndex);
+        console.log(`[save] index=${currentLinkIndex}, group=${currentGroupIndex}`);
+    } catch (e) {
+        console.warn("[save] Failed to store navigation state:", e);
     }
-    currentLinkIndex = index;
-    highlightLink(flatLinks[currentLinkIndex]);
 }
+
+function restoreCurrentLink() {
+    console.log("restoreCurrentLink");
+    const savedIndex = parseInt(sessionStorage.getItem("sidebar-nav-index"));
+    const savedGroup = parseInt(sessionStorage.getItem("sidebar-group-index"));
+    console.log(`restored savedIndex=${savedIndex} savedGroup=${savedGroup}`);
+    if (isNaN(savedIndex)) {
+        console.log('initial state');
+        currentLinkIndex = savedIndex;
+    }
+    else {
+        if (savedIndex >=0 && savedIndex < flatLinks.length){
+            console.log('transition state');            
+            currentLinkIndex = savedIndex;
+            console.log(`incremented flatLinks.length=${flatLinks.length}`);            
+        }
+        else {
+            console.log('abnormal state');
+            currentLinkIndex = 0;
+        }
+    }
+            
+    if (!isNaN(savedGroup) && savedGroup >= 0 && savedGroup < linkGroups.length) {
+        currentGroupIndex = savedGroup;
+    }
+    else {
+        currentGroupIndex=0;
+    }
+    console.log(`restored currentLinkIndex=${currentLinkIndex} currentGroupIndex=${currentGroupIndex}`);    
+}
+
+function incLink() {
+    console.log("incLink");
+
+    if (isNaN(currentLinkIndex) || currentLinkIndex < 0) {
+        currentLinkIndex = 0;
+    }
+    else {
+        if (currentLinkIndex + 1 >= flatLinks.length) {
+            console.warn("[incLink] index out of bounds");
+            return;
+        }
+        else {
+            currentLinkIndex += 1;
+        }
+    }
+    console.log(`incLink; currentLinkIndex=${currentLinkIndex}`);
+    saveCurrentLink();
+}
+
+function decLink() {
+    console.log("decLink");
+
+    if (isNaN(currentLinkIndex) || currentLinkIndex < 0) {
+        currentLinkIndex = 0;
+    }
+    else {
+        if (currentLinkIndex -1 < 0) {
+            console.warn("[decLink] index out of bounds");
+            return;
+        }
+        else {
+            currentLinkIndex -= 1;
+        }
+    }
+    console.log(`decLink: currentLinkIndex=${currentLinkIndex}`);
+    saveCurrentLink();
+}
+
+
 function moveToGroup(delta) {
     console.log(`[moveToGroup] delta=${delta}`);
     const newGroupIndex = currentGroupIndex + delta;
@@ -56,36 +135,82 @@ function moveToGroup(delta) {
             console.error("[moveToGroup] failed to find link in flatLinks");
             return;
         }
+        console.log(`newLinkIndex=${newLinkIndex}`);
         currentLinkIndex = newLinkIndex;
-        highlightLink(flatLinks[currentLinkIndex]);
+
     } else {
-        console.warn("[moveToGroup] group is empty");
+        console.warn("[moveToGroup] group empty");
+    }
+    saveCurrentLink();    
+}
+
+function removeSessionStorage(){
+    sessionStorage.removeItem("sidebar-nav-index");
+    sessionStorage.removeItem("sidebar-group-index");
+}
+
+function handleKeyNavigation(event) {
+    console.log(`handleKeyNavigation: key=${event.key} navigationMode=${navigationMode}`);
+    if (!navigationMode && ["n","p"].includes(event.key)) {
+        console.log(`handleKeyNavigation: check key=${event.key} navigationMode=${navigationMode}`);        
+        navigationMode = true;
+        console.log("[mode] navigation mode gets ON");
+        initializeLinks();        
+    }
+
+    if (!navigationMode) return;
+    switch (event.key) {
+    case "e":
+        console.log("push e");
+        navigationMode = false;
+        clearHighLightLink();
+        console.log("[mode] navigation mode OFF");
+        break;
+    case "t":
+        navigationMode = false;
+        clearHighLightLink();
+        location.href="http://localhost:4321/";
+        removeSessionStorage();
+        break;
+    case "n":
+        incLink();
+        highlightLink();
+        break;
+    case "p":
+        decLink();
+        highlightLink();
+        break;
+    case "N":
+        moveToGroup(1);
+        highlightLink();
+        break;
+    case "P":
+        moveToGroup(-1);
+        highlightLink();
+        break;
+    case "Enter":
+        console.log("Enter");
+        if (flatLinks[currentLinkIndex]) {
+            console.log(`[navigate] navigating to ${flatLinks[currentLinkIndex].href}`);
+            flatLinks[currentLinkIndex].click();
+        }
+        navigationMode=false;
+        break;
     }
 }
-// キー操作
-window.addEventListener("keydown", (event) => {
-    console.log(`[keydown] key="${event.key}", shift=${event.shiftKey}`);
-    if (!navigationMode && event.key === "n" && !event.shiftKey) {
-        initializeLinks();
-        navigationMode = true;
-        moveToLink(0);
-        return;
-    }
-    if (!navigationMode) return;
-    if (event.key === "N") {
-        moveToGroup(1);
-    } else if (event.key === "P") {
-        moveToGroup(-1);
-    } else if (event.key === "n") {
-        moveToLink(currentLinkIndex + 1);
-    } else if (event.key === "p") {
-        moveToLink(currentLinkIndex - 1);
-    } else if (event.key === "Enter") {
-        console.log("[keydown] triggering click");
-        flatLinks[currentLinkIndex]?.click();
-    } else if (event.key === "e" || event.key === "Escape") {
-        console.log("[keydown] exiting navigation mode");
-        navigationMode = false;
-        flatLinks.forEach(l => l.classList.remove("sidebar-nav-highlight"));
+document.addEventListener("keydown", handleKeyNavigation);
+// ユーザのマウスクリックで位置を更新
+document.addEventListener("click", (event) => {
+    const target = event.target.closest("a");
+    if (!target) return;
+    initializeLinks(); // 必ずflatLinksを最新化
+    const index = flatLinks.indexOf(target);
+    if (index !== -1) {
+        currentLinkIndex = index;
+        currentGroupIndex = linkGroups.findIndex(group => group.includes(target));
+        console.log(`[click] Updated index to ${currentLinkIndex}, group to ${currentGroupIndex}`);
+        saveCurrentLink();                
+    } else {
+        console.log("[click] target not in flatLinks, ignored");
     }
 });
